@@ -32,6 +32,9 @@ import (
 	"github.com/richardlehane/siegfried/pkg/loc"
 	"github.com/richardlehane/siegfried/pkg/mimeinfo"
 	"github.com/richardlehane/siegfried/pkg/pronom"
+
+	"github.com/richardlehane/siegfried/pkg/wikidata"
+
 	"github.com/richardlehane/siegfried/pkg/reader"
 	"github.com/richardlehane/siegfried/pkg/sets"
 )
@@ -39,7 +42,7 @@ import (
 var usage = `
 Usage:
    roy build -help
-   roy add -help 
+   roy add -help
    roy harvest -help
    roy inspect -help
    roy sets -help
@@ -50,7 +53,7 @@ var inspectUsage = `
 Usage of inspect:
    roy inspect
       Inspect the default signature file.
-   roy inspect SIGNATURE 
+   roy inspect SIGNATURE
       Inspect a named signature file e.g. roy inspect archivematica.sig
    roy inspect MATCHER
       Inspect  contents of a matcher e.g. roy inspect bytematcher.
@@ -58,16 +61,16 @@ Usage of inspect:
       Current matchers are bytematcher (or bm), containermatcher (cm),
       xmlmatcher (xm), riffmatcher (rm), namematcher (nm), textmatcher (tm).
    roy inspect INTEGER
-      Identify the signatures related to the numerical hits reported by the 
+      Identify the signatures related to the numerical hits reported by the
       sf debug and slow flags (sf -log d,s). E.g. roy inspect 100
       To inspect hits within containermatchers, give the index for the
-      container type with the -ct flag, and the name of the container 
+      container type with the -ct flag, and the name of the container
       sub-folder with the -cn flag.
       The container types are 0 for XML and 1 for MSCFB.
       E.g. roy inspect -ct 0 -cn [Content_Types].xml 0
    roy inspect FMT
       Inspect a file format signature e.g. roy inspect fmt/40
-      MIME-info and LOC FDD file format signatures can be inspected too. 
+      MIME-info and LOC FDD file format signatures can be inspected too.
       Also accepts comma separated lists of formats or format sets.
       E.g. roy inspect fmt/40,fmt/41 or roy inspect @pdfa
    roy inspect priorities
@@ -87,15 +90,15 @@ Usage of inspect:
       Short alias is roy inspect ip.
       View graph with a command e.g. roy inspect ip | dot -Tpng -o implicit.png
    roy inspect releases
-      Summary view of a PRONOM release-notes.xml file (which must be in your 
-      siegfried home directory). 
+      Summary view of a PRONOM release-notes.xml file (which must be in your
+      siegfried home directory).
 
 Additional flags:
    The roy inspect FMT and roy inspect priorities sub-commands both accept
    the following flags. These flags mirror the equivalent flags for the
    roy build subcommand and you can find more detail with roy build -help.
    -extend, -extendc
-      Add additional extension and container extension signature files. 
+      Add additional extension and container extension signature files.
       Useful for inspecting test signatures during development.
       E.g. roy inspect -extend my-groovy-sig.xml dev/1
    -limit, -exclude
@@ -115,12 +118,16 @@ Additional flags:
 
 var (
 	// BUILD, ADD flag sets
-	build       = flag.NewFlagSet("build | add", flag.ExitOnError)
-	home        = build.String("home", config.Home(), "override the default home directory")
-	droid       = build.String("droid", config.Droid(), "set name/path for DROID signature file")
-	mi          = build.String("mi", "", "set name/path for MIMEInfo signature file")
-	fdd         = build.String("fdd", "", "set name/path for LOC FDD signature file")
-	locfdd      = build.Bool("loc", false, "build a LOC FDD signature file")
+	build  = flag.NewFlagSet("build | add", flag.ExitOnError)
+	home   = build.String("home", config.Home(), "override the default home directory")
+	droid  = build.String("droid", config.Droid(), "set name/path for DROID signature file")
+	mi     = build.String("mi", "", "set name/path for MIMEInfo signature file")
+	fdd    = build.String("fdd", "", "set name/path for LOC FDD signature file")
+	locfdd = build.Bool("loc", false, "build a LOC FDD signature file")
+
+	// TODO: Wikidata identifier...
+	wikidd = build.Bool("wikidata", false, "build a Wikidata FDD signature file")
+
 	nopronom    = build.Bool("nopronom", false, "don't include PRONOM sigs with LOC signature file")
 	container   = build.String("container", config.Container(), "set name/path for Droid Container signature file")
 	name        = build.String("name", "", "set identifier name")
@@ -206,16 +213,30 @@ func makegob(s *siegfried.Siegfried, opts []config.Option) error {
 		id, err = mimeinfo.New(opts...)
 	} else if *locfdd || *fdd != "" {
 		id, err = loc.New(opts...)
+
+		// TODO: Wikidata handling...
+	} else if *wikidd {
+		_, _ = wikidata.New(opts...)
 	} else {
 		id, err = pronom.New(opts...)
 	}
 	if err != nil {
 		return err
 	}
-	err = s.Add(id)
-	if err != nil {
-		return err
+	// TODO: it seems possible we can still have a nil identifier here, if so
+	// we can handle that while developing a new identifier, for example,
+	// Wikidata currently returns a blank identifier.
+	if id != nil {
+		err = s.Add(id)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Println("Identifier returned nil, not adding to a Siegfried")
 	}
+	// s is a Siegfried...
+	// Save belongs to Siegfried.
+	// config.Signature is the location of the default signature file.
 	return s.Save(config.Signature())
 }
 
@@ -324,6 +345,9 @@ func getOptions() []config.Option {
 	if *locfdd {
 		opts = append(opts, config.SetLOC(""))
 	}
+	if *wikidd {
+		opts = append(opts, config.SetWikidata())
+	}
 	if *nopronom {
 		opts = append(opts, config.SetNoPRONOM())
 	}
@@ -339,8 +363,8 @@ func getOptions() []config.Option {
 	if *extendc != "" {
 		if *extend == "" {
 			fmt.Println(
-				`roy: warning! Unless the container extension only extends formats defined in 
-the DROID signature file you should also include a regular signature extension 
+				`roy: warning! Unless the container extension only extends formats defined in
+the DROID signature file you should also include a regular signature extension
 (-extend) that includes a FileFormatCollection element describing the new formats.`)
 		}
 		opts = append(opts, config.SetExtendC(sets.Expand(*extendc)))
@@ -415,6 +439,9 @@ the DROID signature file you should also include a regular signature extension
 	if *inspectLOC {
 		opts = append(opts, config.SetLOC(""))
 	}
+
+	// TODO: do we need an inspect Wikidata function?
+
 	if *inspectInclude != "" {
 		opts = append(opts, config.SetLimit(sets.Expand(*inspectInclude)))
 	}
@@ -427,8 +454,8 @@ the DROID signature file you should also include a regular signature extension
 	if *inspectExtendc != "" {
 		if *inspectExtend == "" {
 			fmt.Println(
-				`roy: warning! Unless the container extension only extends formats defined in 
-the DROID signature file you should also include a regular signature extension 
+				`roy: warning! Unless the container extension only extends formats defined in
+the DROID signature file you should also include a regular signature extension
 (-extend) that includes a FileFormatCollection element describing the new formats.`)
 		}
 		opts = append(opts, config.SetExtendC(sets.Expand(*inspectExtendc)))
