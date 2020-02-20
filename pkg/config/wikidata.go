@@ -4,10 +4,11 @@ import "path/filepath"
 
 var wikidata = struct {
 	definitions string
-	name string
+	name        string
+	nopronom    bool
 }{
-	definitions: "wikidata_definitions",
-	name: "wikidata",
+	definitions: "wikidata_definitions-{version-info-tbd}",
+	name:        "wikidata",
 }
 
 func Wikidata() string {

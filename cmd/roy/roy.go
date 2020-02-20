@@ -195,17 +195,18 @@ func savereps() error {
 	if err != nil {
 		err = os.Mkdir(config.Reports(), os.ModePerm)
 		if err != nil {
-			return fmt.Errorf("roy: error making reports directory")
+			return fmt.Errorf("roy: error making reports directory %s", err)
 		}
 	}
 	file.Close()
 	errs := pronom.Harvest()
 	if len(errs) > 0 {
-		return fmt.Errorf("roy: errors saving reports to disk")
+		return fmt.Errorf("roy: errors saving reports to disk %s", errs)
 	}
 	return nil
 }
 
+// TODO: document what makegob does.
 func makegob(s *siegfried.Siegfried, opts []config.Option) error {
 	var id core.Identifier
 	var err error
@@ -213,10 +214,8 @@ func makegob(s *siegfried.Siegfried, opts []config.Option) error {
 		id, err = mimeinfo.New(opts...)
 	} else if *locfdd || *fdd != "" {
 		id, err = loc.New(opts...)
-
-		// TODO: Wikidata handling...
 	} else if *wikidd {
-		_, _ = wikidata.New(opts...)
+		id, err = wikidata.New(opts...)
 	} else {
 		id, err = pronom.New(opts...)
 	}
