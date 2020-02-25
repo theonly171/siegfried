@@ -39,7 +39,10 @@ func New(opts ...config.Option) (core.Identifier, error) {
 
 	fmt.Println("Congratulations: doing something with the Wikidata identifier package!")
 
-	wikidata, _ := newWikidata()
+	wikidata, err := newWikidata()
+	if err != nil {
+		return nil, fmt.Errorf("error in New Wikidata: %s", err)
+	}
 
 	// TODO: What does date versioning look like from the Wikidata sources?
 	updatedDate := time.Now().Format("2006-01-02")

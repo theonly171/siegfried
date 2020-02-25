@@ -29,8 +29,7 @@ type Recorder struct {
 
 // Active comment...
 func (r *Recorder) Active(m core.MatcherType) {
-	// implement
-	fmt.Println("TODO Wikidata: Active isn't implemented....")
+	// TODO Wikidata: Active isn't implemented...
 }
 
 // Record comment...
@@ -58,9 +57,7 @@ func (r *Recorder) Record(m core.MatcherType, res core.Result) bool {
 
 // Satisfied comment...
 func (r *Recorder) Satisfied(mt core.MatcherType) (bool, core.Hint) {
-	// TODO: Not sure what Satisfied does in the context of a Signature
-	// matcher.
-	fmt.Println("TODO Wikidata: Satisfied isn't implemented...")
+	// TODO Wikidata: Satisfied isn't implemented...
 	return false, core.Hint{}
 }
 
@@ -111,7 +108,7 @@ func (r *Recorder) Report() []core.Identification {
 		ret[i] = v
 	}
 
-	fmt.Printf("TODO Wikidata: returning identification %+v\n", ret)
+	// TODO Wikidata: returning identification...
 
 	return ret
 }
