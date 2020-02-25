@@ -156,13 +156,14 @@ var (
 	repetition  = build.Int("repetition", config.Repetition(), "define a maximum tolerable repetition in a segment, used in combination with cost to determine segmentation")
 
 	// HARVEST
-	harvest           = flag.NewFlagSet("harvest", flag.ExitOnError)
-	harvestHome       = harvest.String("home", config.Home(), "override the default home directory")
-	harvestDroid      = harvest.String("droid", config.Droid(), "set name/path for DROID signature file")
-	harvestChanges    = harvest.Bool("changes", false, "harvest the latest PRONOM release-notes.xml file")
-	_, htimeout, _, _ = config.HarvestOptions()
-	timeout           = harvest.Duration("timeout", htimeout, "set duration before timing-out harvesting requests e.g. 120s")
-	throttlef         = harvest.Duration("throttle", 0, "set a time to wait HTTP requests e.g. 50ms")
+	harvest            = flag.NewFlagSet("harvest", flag.ExitOnError)
+	harvestHome        = harvest.String("home", config.Home(), "override the default home directory")
+	harvestDroid       = harvest.String("droid", config.Droid(), "set name/path for DROID signature file")
+	harvestChanges     = harvest.Bool("changes", false, "harvest the latest PRONOM release-notes.xml file")
+	_, htimeout, _, _  = config.HarvestOptions()
+	timeout            = harvest.Duration("timeout", htimeout, "set duration before timing-out harvesting requests e.g. 120s")
+	throttlef          = harvest.Duration("throttle", 0, "set a time to wait HTTP requests e.g. 50ms")
+	harvestWikidataSig = harvest.Bool("wikidata", false, "harvest a static Wikidata report")
 
 	// INSPECT (roy inspect | roy inspect fmt/121 | roy inspect usr/local/mysig.sig | roy inspect 10)
 	inspect        = flag.NewFlagSet("inspect", flag.ExitOnError)
@@ -526,6 +527,8 @@ func main() {
 			setHarvestOptions()
 			if *harvestChanges {
 				err = pronom.GetReleases(config.Local("release-notes.xml"))
+			} else if *harvestWikidataSig {
+				harvestWikidata()
 			} else {
 				err = savereps()
 			}
